@@ -1,0 +1,249 @@
+
+import pymysql
+import pandas as pd
+import datetime
+
+pymysql.install_as_MySQLdb()
+
+db = pymysql.connect(host="localhost", user="root", passwd='password', db="museum", autocommit=True)
+
+
+cursor = db.cursor()
+def addmuseum(museum):
+    sql = """insert into museum.museum values('{m}',NULL);""".format(m=museum)
+    cursor.execute(sql)
+
+def deletemuseum(museum):
+    sql2 = '''select * from museum.museum where museum_name = '{m}';'''.format(m=museum)
+    sql = """delete from museum.museum where museum_name= '{m}';""".format(m=museum)
+    if cursor.execute(sql2) == 0:
+       return 0
+    else:
+        cursor.execute(sql)
+        return 1
+        
+
+
+def createnewaccount(email,pswrd,card_num,exp_mo,exp_yr,sec_num):
+    sql2 = """select email from museum.visitor where email = '{e}';""".format(e=email)
+    if cursor.execute(sql2) == 0:
+        sql = """insert into museum.visitor values(
+                   '{email}', '{password}', {card_number}, {expiration_month}, {expiration_year}, {security_number});""".format(
+            email=email,
+            password=pswrd,
+            card_number=card_num,
+            expiration_month=exp_mo,
+            expiration_year=exp_yr,
+            security_number=sec_num)
+        cursor.execute(sql)
+        return 1
+    else:
+        return 0
+
+def addexhibit(museum, exhibit, year, url, curator):
+    sql3 = """select * from museum.museum where museum_name = '{m}';""".format(m=museum)
+    sql2 = """select * from museum.exhibit where museum_name = '{m}' and exhibit_name = '{e}';""".format(m=museum, e = exhibit)
+    sql4 = """select * from museum.museum where museum_name = '{m}' and  curator_email = '{x}';""".format(m = museum, x = curator)
+    sql = """insert into museum.exhibit values('{museum}', '{exhibit}',{year}, '{url}')""".format(museum=museum, exhibit=exhibit, year=year, url=url)
+    if cursor.execute(sql2) == 0 and cursor.execute(sql3) != 0 and cursor.execute(sql4) != 0:
+        cursor.execute(sql)
+        return 1
+    elif cursor.execute(sql3) == 0:
+        return 0
+    elif cursor.execute(sql4) == 0:
+        return 3
+    else:
+        return 2
+
+def removeexhibit(museum, exhibit, curator):
+    sql4 = """select * from museum.museum where museum_name = '{m}' and  curator_email = '{x}';""".format(m = museum, x = curator)
+    sql2 = """select * from museum.exhibit where museum_name = '{m}' and exhibit_name = '{e}';""".format(m=museum, e=exhibit)
+    sql = "delete from museum.exhibit where museum_name='" + museum + "' AND exhibit_name='" + exhibit + "';"
+    if cursor.execute(sql2) != 0 and cursor.execute(sql4) != 0:
+        cursor.execute(sql)
+        return 1
+    elif cursor.execute(sql4) == 0:
+        return 3
+    else:
+        return 0
+
+def deleteaccount(account):
+    sql2 = """select * from museum.visitor where email = '{e}'""".format(e=account)
+    sql = "delete from museum.visitor where email='" + account + "';"
+    if cursor.execute(sql2) != 0:
+        cursor.execute(sql)
+        return 1
+    else:
+        return 0
+
+def purchaseticket(email,museum):
+    price = 25
+    time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    sql3 = """select * from museum.visitor where email = '{e}';""".format(e=email)
+    sql4 = """select * from museum.museum where museum_name = '{m}';""".format(m=museum)
+    sql2 = """select * from museum.ticket where email = '{e}' and museum_name = '{m}';""".format(e=email, m=museum)
+    sql = """insert into museum.ticket values('{e}', '{m}',
+               {p}, '{t}')""".format(e=email, m=museum, p=price, t=time)
+    if cursor.execute(sql2) == 0 and cursor.execute(sql3) != 0 and cursor.execute(sql4) != 0:
+        cursor.execute(sql)
+        return 1
+    elif cursor.execute(sql3) == 0:
+        return 2
+    elif cursor.execute(sql4) == 0:
+        return 3
+    else:
+        return 4
+
+def reviewmuseum(email, museum, comment, rating):
+    sql4 = """select * from museum.ticket where museum_name = '{m}' and email = '{e}';""".format(m = museum, e = email)
+    sql3 = """select * from museum.museum where museum_name = '{m}';""".format(m=museum)
+    sql2 = """select * from museum.review where email = '{e}' and museum_name = '{m}';""".format(e=email, m=museum)
+    sql = """insert into museum.review values('{e}','{m}','{c}',{r})""".format(e=email, m=museum, c=comment, r=rating)
+    if cursor.execute(sql2) == 0 and cursor.execute(sql3) != 0 and cursor.execute(sql4) != 0:
+        cursor.execute(sql)
+        return 1
+    elif cursor.execute(sql3) == 0:
+        return 2
+    elif cursor.execute(sql4) == 0:
+        return 4
+    else:
+        return 3
+
+def createcuratorreq(email,museum):
+    sql5 = """select curator_email from museum.museum where museum_name = '{m}';""".format(m=museum)
+    sql4 = """select * from museum.museum where museum_name = '{m}';""".format(m=museum)
+    sql3 = """select * from museum.visitor where email = '{e}';""".format(e=email)
+    sql2 = """select * from museum.curator_request where email = '{e}' and museum_name = '{m}';""".format(e=email,
+                                                                                                          m=museum)
+    sql = "insert into museum.curator_request values('" + email + "','" + museum + "')"
+    a = cursor.execute(sql5)
+    b = str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",", "")
+    if b == 'None' and cursor.execute(sql2) == 0 and cursor.execute(sql3) != 0 and cursor.execute(sql4) != 0:
+        cursor.execute(sql)
+        return 1
+    elif b != 'None':
+        return 2
+
+    elif cursor.execute(sql3) == 0:
+        return 3
+    elif cursor.execute(sql4) == 0:
+        return 4
+    else:
+        return 5
+
+def getallmuseums():
+    sql = "Select museum.museum_name,avg(review.rating) From museum.museum left join museum.review on museum.museum_name = review.museum_name group by museum_name"
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    dcursor.execute(sql)
+    museums = dcursor.fetchall()
+    return museums
+def getallcuratorrequests():
+    sql = "Select museum_name, email from museum.curator_request;"
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    dcursor.execute(sql)
+    requests = dcursor.fetchall()
+    return requests
+def viewspecificmuseum(museum):
+    sql = "Select exhibit_name,year, url From museum.exhibit where museum_name='" + museum + "'"
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    dcursor.execute(sql)
+    exhibit = dcursor.fetchall()
+    return exhibit
+
+def viewmuseumreview(museum):
+    sql = "Select comment, rating From museum.review"
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    dcursor.execute(sql)
+    rev = dcursor.fetchall()
+    return rev
+
+def login(Iemail, Ipassword):
+    sqlc = "select curator_email from Museum.Museum where curator_email = '" + Iemail + "'"
+    sql = "select email, password from Museum.VISITOR where email = '"+str(Iemail)+"' and password = '"+str(Ipassword)+"';"
+    sqla = "select email, password from Museum.ADMIN where email = '" + str(Iemail) + "' and password = '" + str(
+        Ipassword) + "';"
+    sqla
+    if cursor.execute(sql) == 0 and cursor.execute(sqla) == 0:
+        return 0
+    elif (cursor.execute(sqla) == 0 and cursor.execute(sqlc) != 0):
+        return 3 #is a curator
+    elif (cursor.execute(sqla) != 0 and cursor.execute(sqlc) == 0):
+        return 2 #is admin
+    else:
+        return 1
+
+def allmuseums():
+    sql = "Select museum_name From museum.museum"
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    dcursor.execute(sql)
+    museums = dcursor.fetchall()
+    return museums
+
+
+def viewmyreviews(useremail):
+    sql = "Select museum_name, comment, rating From museum.review where (email = '" + useremail+ "')"
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    dcursor.execute(sql)
+    review = dcursor.fetchall()
+    return review
+
+def viewmytickets(useremail):
+    sql = "Select museum_name, price, purchase_timestamp From museum.ticket where (email = '" + useremail+ "')"
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    print(sql)
+    dcursor.execute(sql)
+    tickets = dcursor.fetchall()
+
+    return tickets
+
+
+def acceptcuratorrequest(adminemail, email, museum):
+
+    sql = """select * from museum.admin where email = '{a}';""".format(a=adminemail)
+    sql2 = """select * from museum.curator_request where email = '{e}' and museum_name = '{m}';""".format(e=email,
+                                                                                                          m=museum)
+    sql3 = """select * from museum.museum where museum_name = '{m}';""".format(m=museum)
+    sql7 = """update museum.museum set curator_email = '{e}' where museum_name = '{m}';""".format(e=email, m=museum)
+    sql6 = """select * from museum.visitor where email = '{e}';""".format(e=email)
+    sql5 = """select curator_email from museum.museum where museum_name = '{m}';""".format(m=museum)
+    sql4 = """delete from museum.curator_request where email = '{e}' and museum_name = '{m}';""".format(e=email,
+                                                                                                        m=museum)
+    print(cursor.execute(sql))
+    print(cursor.execute(sql2))
+    print(cursor.execute(sql3))
+    print(cursor.execute(sql5))
+    print(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",", ""))
+    if str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",", "") == 'None' and cursor.execute(
+            sql) != 0 and cursor.execute(sql2) != 0 and cursor.execute(sql3) != 0:
+        print(sql4)
+        cursor.execute(sql4)
+        print(sql7)
+        cursor.execute(sql7)
+    elif cursor.execute(sql) == 0:
+        print("Admin email is not correct")
+    elif cursor.execute(sql6) == 0:
+        print("Email is not valid")
+    elif cursor.execute(sql3) == 0:
+        print("Museum is not valid")
+    elif cursor.execute(sql2) == 0:
+        print("No request has been submitted for this email/museum combo")
+    else:
+        print("Museum already has a curator")
+
+def deletecuratorrequest(adminemail, email, museum):
+
+    sql = """select * from museum.admin where email = '{a}';""".format(a=adminemail)
+    sql2 = """select * from museum.curator_request where email = '{e}' and museum_name = '{m}';""".format(e=email, m = museum)
+    sql4 = """delete from museum.curator_request where email = '{e}' and museum_name = '{m}';""".format(e=email, m=museum)
+
+    if cursor.execute(sql) != 0 and cursor.execute(sql2) != 0:
+        print(cursor.execute(sql4))
+        cursor.execute(sql4)
+
+def mycuratormuseums(email):
+    sql = """select m.museum_name, COUNT(DISTINCT e.exhibit_name), AVG(r.rating) FROM museum.museum m LEFT JOIN museum.exhibit e ON m.museum_name = e.museum_name LEFT JOIN museum.review r ON m.museum_name = r.museum_name WHERE m.curator_email = '{e}' GROUP BY m.museum_name ORDER BY museum_name ASC;""".format(e = email)
+
+    dcursor = db.cursor(pymysql.cursors.DictCursor)
+    dcursor.execute(sql)
+    mus = dcursor.fetchall()
+    return mus
